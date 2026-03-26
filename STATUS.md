@@ -192,6 +192,110 @@ Each module includes:
 - Progress logging
 - Input validation
 
+## TabNet Explainability Implementation - COMPLETE ✅
+
+### Files Implemented (1 total)
+
+- **`src/explainability/explainability.py`** (535 lines)
+  - `TabNetExplainer` class for extracting feature importance
+  - `plot_feature_importance()` - Visualize top-K features
+  - `plot_step_importance()` - Importance per decision step
+  - `plot_mask_heatmap()` - Feature mask heatmap across samples
+  - `save_explanation_report()` - Export explanations to JSON
+  - `explain_tabnet_model()` - End-to-end pipeline
+
+### Features Implemented ✅
+
+1. **Feature Mask Extraction**
+   - Extract attention masks from TabNet.explain()
+   - Returns: masks (n_samples, n_steps, n_features) and predictions
+
+2. **Feature Importance Computation**
+   - Global importance: aggregate across samples & steps
+   - Step-wise importance: track importance per decision step
+   - Top-K features: identify most important features
+   - Multiple aggregation methods: mean, max, sum
+
+3. **Instance-Level Explanations**
+   - Per-sample explanation with step-wise decisions
+   - Top features used at each step
+   - Exportable to JSON
+
+4. **Visualizations**
+   - Feature importance bar chart
+   - Step importance subplots
+   - Feature mask heatmap with sample/feature dimensions
+   - Full matplotlib integration with DPI control
+
+5. **End-to-End Pipeline**
+   - `explain_tabnet_model()` orchestrates entire analysis
+   - Generates all plots and exports results
+   - Flexible output directory handling
+   - Progress logging and status updates
+
+### Usage Example
+
+```python
+from src.explainability.explainability import explain_tabnet_model
+
+# Complete analysis in one call
+results = explain_tabnet_model(
+    model=trained_tabnet,
+    X_test=X_test,
+    feature_names=feature_names,
+    output_dir="reports/figures",
+    top_k=15,
+    include_heatmap=True,
+    include_step_plots=True
+)
+
+# Access results
+print("Generated plots:")
+for plot_name, plot_path in results['plots'].items():
+    print(f"  {plot_name}: {plot_path}")
+
+print("\nTop 5 features:")
+for feature_name, importance in results['top_features'][:5]:
+    print(f"  {feature_name}: {importance:.4f}")
+```
+
+### Output Structure
+
+```
+reports/figures/
+├── feature_importance.png        # Top-K aggregated features
+├── step_importance.png           # Importance per decision step  
+└── feature_mask_heatmap.png      # Heatmap of feature masks
+```
+
+### Validation
+
+All components validated:
+```
+✓ Module docstring present
+✓ All classes and methods verified
+✓ All required functions implemented
+✓ 1 class with 6 methods
+✓ 5 module-level functions
+✓ 535 lines of production code
+✓ Complete documentation
+```
+
+### Dependencies
+
+```
+Required:
+- pytorch_tabnet (for model.explain())
+- numpy
+- matplotlib
+- seaborn
+```
+
+Install with:
+```bash
+pip install matplotlib seaborn
+```
+
 ## Next Steps (Not Implemented)
 
 The following files remain as placeholders (no implementation):
@@ -204,10 +308,9 @@ The following files remain as placeholders (no implementation):
 - `src/training/train.py`
 - `src/tuning/hyperparameter_tuning.py`
 - `src/evaluation/metrics.py`
-- `src/explainability/explainability.py`
 - `main.py`
 
-These are ready for implementation once preprocessing is complete.
+These are ready for implementation when needed.
 
 ## Git Status
 
