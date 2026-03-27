@@ -1,8 +1,8 @@
 """
-XGBoost triage baseline training.
+XGBoost triage baseline training utilities.
 
-Uses the existing processed v1 row-level triage dataset without introducing
-new preprocessing or feature scaling.
+Supports both the reusable triage artifact pipeline under ``models/xgboost/``
+and the existing training helpers used by ``src/training/train.py``.
 """
 
 import json
@@ -12,6 +12,7 @@ from typing import Any, Dict, Tuple
 
 import joblib
 import numpy as np
+from sklearn.utils.class_weight import compute_class_weight
 from xgboost import XGBClassifier
 
 
@@ -48,7 +49,7 @@ def save_triage_comparison(
         }
     }
     if tabnet_metrics_path.exists():
-        with open(tabnet_metrics_path, "r") as handle:
+        with open(tabnet_metrics_path, "r", encoding="utf-8") as handle:
             tabnet_metrics = json.load(handle)
         comparison["tabnet"] = {
             "macro_f1": tabnet_metrics["macro_f1"],
@@ -62,7 +63,7 @@ def save_triage_comparison(
     else:
         comparison["tabnet"] = "missing triage_metrics.json"
 
-    with open(comparison_path, "w") as handle:
+    with open(comparison_path, "w", encoding="utf-8") as handle:
         json.dump(comparison, handle, indent=2)
 
     return comparison_path
@@ -89,13 +90,86 @@ def load_xgboost_data(
     )
 
 
+def compute_sample_weights(y) -> Tuple[np.ndarray, Dict[int, float]]:
+    """Compute balanced sample weights for class-imbalanced training."""
+    y_array = y.values.ravel() if hasattr(y, "values") else np.asarray(y).ravel()
+    classes = np.unique(y_array)
+
+    class_weights = compute_class_weight(
+        class_weight="balanced",
+        classes=classes,
+        y=y_array,
+    )
+
+    class_weight_dict = {
+        int(label): float(weight)
+        for label, weight in zip(classes, class_weights)
+    }
+    sample_weights = np.array([class_weight_dict[int(label)] for label in y_array])
+
+    return sample_weights, class_weight_dict
+
+
+def train_xgboost_model(
+    X_train,
+    y_train,
+    X_val,
+    y_val,
+    sample_weights=None,
+) -> XGBClassifier:
+    """Train the legacy JSON-export XGBoost model used by the FastAPI app."""
+    X_train_array = X_train.values if hasattr(X_train, "values") else X_train
+    X_val_array = X_val.values if hasattr(X_val, "values") else X_val
+    y_train_array = y_train.values.ravel() if hasattr(y_train, "values") else np.asarray(y_train).ravel()
+    y_val_array = y_val.values.ravel() if hasattr(y_val, "values") else np.asarray(y_val).ravel()
+
+    model = XGBClassifier(
+        objective="multi:softprob",
+        num_class=len(np.unique(y_train_array)),
+        eval_metric="mlogloss",
+        n_estimators=2000,
+        learning_rate=0.05,
+        max_depth=6,
+        subsample=0.8,
+        colsample_bytree=0.8,
+        min_child_weight=3,
+        gamma=0.1,
+        random_state=42,
+        early_stopping_rounds=50,
+        tree_method="hist",
+        device="cuda",
+    )
+
+    fit_kwargs = {
+        "eval_set": [(X_val_array, y_val_array)],
+        "verbose": 100,
+    }
+    if sample_weights is not None:
+        fit_kwargs["sample_weight"] = sample_weights
+
+    model.fit(X_train_array, y_train_array, **fit_kwargs)
+    return model
+
+
+def predict_with_threshold(model: XGBClassifier, X, high_threshold: float = 0.35):
+    """Bias predictions toward the highest-severity class when confidence is sufficient."""
+    X_array = X.values if hasattr(X, "values") else X
+    probabilities = model.predict_proba(X_array)
+    predictions = np.where(
+        probabilities[:, 2] > high_threshold,
+        2,
+        np.argmax(probabilities, axis=1),
+    )
+    return predictions, probabilities
+
+
 def train_xgboost_triage_model(
     version: str = "v1",
     model_dir: str = "models/xgboost",
     reports_dir: str = "reports/metrics",
     verbose: bool = True,
 ) -> Tuple[XGBClassifier, Dict[str, Any]]:
-    """Train the XGBoost triage baseline and save its artifacts."""
+    """Train the reusable triage baseline and save model, config, and metrics."""
     (
         X_train,
         X_val,
@@ -150,7 +224,7 @@ def train_xgboost_triage_model(
     comparison_path = save_triage_comparison(metrics, reports_dir="reports")
 
     joblib.dump(model, model_path)
-    with open(config_path, "w") as handle:
+    with open(config_path, "w", encoding="utf-8") as handle:
         json.dump(
             {
                 "model_name": "triage_model",
@@ -185,10 +259,12 @@ def train_xgboost_triage_model(
 
 if __name__ == "__main__":
     _, metrics = train_xgboost_triage_model(verbose=True)
-    print(json.dumps(
-        {
-            "macro_f1": metrics["macro_f1"],
-            "overall_accuracy": metrics["overall_accuracy"],
-        },
-        indent=2,
-    ))
+    print(
+        json.dumps(
+            {
+                "macro_f1": metrics["macro_f1"],
+                "overall_accuracy": metrics["overall_accuracy"],
+            },
+            indent=2,
+        )
+    )

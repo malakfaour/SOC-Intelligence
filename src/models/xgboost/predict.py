@@ -10,6 +10,7 @@ from typing import Any, Dict, Tuple, Union
 import joblib
 import numpy as np
 import pandas as pd
+from xgboost import XGBClassifier
 
 
 if hasattr(sys.stdout, "reconfigure"):
@@ -26,26 +27,45 @@ def load_model(
     model_name: str = "triage_model",
     verbose: bool = True,
 ) -> Tuple[Any, Dict[str, Any]]:
-    """Load a saved XGBoost triage model and configuration."""
+    """Load a saved XGBoost model, preferring the packaged triage artifact."""
     model_path = PROJECT_ROOT / model_dir / f"{model_name}.pkl"
     config_path = PROJECT_ROOT / model_dir / f"{model_name}_config.json"
 
-    if not model_path.exists():
-        raise FileNotFoundError(f"XGBoost model not found: {model_path}")
-    if not config_path.exists():
-        raise FileNotFoundError(f"XGBoost config not found: {config_path}")
+    if model_path.exists() and config_path.exists():
+        model = joblib.load(model_path)
+        with open(config_path, "r", encoding="utf-8") as handle:
+            config = json.load(handle)
 
-    model = joblib.load(model_path)
-    with open(config_path, "r") as handle:
-        config = json.load(handle)
+        if verbose:
+            print("=" * 60)
+            print("Loading XGBoost Triage Model")
+            print("=" * 60)
+            print(f"  Model:   {model_path}")
+            print(f"  Config:  {config_path}")
+            print(f"  Classes: {config['classes']}")
+
+        return model, config
+
+    legacy_model_path = PROJECT_ROOT / "models" / "xgboost_model.json"
+    if not legacy_model_path.exists():
+        raise FileNotFoundError(
+            f"XGBoost model not found. Checked {model_path} and {legacy_model_path}."
+        )
+
+    model = XGBClassifier()
+    model.load_model(str(legacy_model_path))
+    config = {
+        "model_name": "xgboost_model",
+        "model_type": "XGBClassifier",
+        "classes": [0, 1, 2],
+        "artifact_format": "json",
+    }
 
     if verbose:
         print("=" * 60)
-        print("Loading XGBoost Triage Model")
+        print("Loading Legacy XGBoost Model")
         print("=" * 60)
-        print(f"  Model:   {model_path}")
-        print(f"  Config:  {config_path}")
-        print(f"  Classes: {config['classes']}")
+        print(f"  Model:   {legacy_model_path}")
 
     return model, config
 
@@ -78,11 +98,13 @@ if __name__ == "__main__":
     model, config = load_model(verbose=True)
     sample = pd.read_csv(PROJECT_ROOT / "data" / "processed" / "v1" / "X_test.csv").head(5)
     preds, probs = predict(model, sample, return_proba=True)
-    print(json.dumps(
-        {
-            "predictions": preds.tolist(),
-            "probabilities_shape": list(probs.shape),
-            "classes": config["classes"],
-        },
-        indent=2,
-    ))
+    print(
+        json.dumps(
+            {
+                "predictions": preds.tolist(),
+                "probabilities_shape": list(probs.shape),
+                "classes": config["classes"],
+            },
+            indent=2,
+        )
+    )
