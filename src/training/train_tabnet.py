@@ -306,7 +306,7 @@ if __name__ == "__main__":
         print("[OK] TRAINING PIPELINE COMPLETE")
         print("=" * 60)
         print(f"\n[ARTIFACTS SAVED]")
-        print(f"  Model: {artifact_paths.get('model', 'models/tabnet/triage_model.pkl')}")
+        print(f"  Model: {artifact_paths.get('model', 'models/tabnet/triage_model.zip')}")
         print(f"  Scaler: {artifact_paths.get('scaler', 'models/tabnet/triage_model_scaler.pkl')}")
         print(f"  Config: {artifact_paths.get('config', 'models/tabnet/triage_model_config.json')}")
         print(f"  Metrics: {metrics_file}")

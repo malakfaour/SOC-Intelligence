@@ -101,7 +101,7 @@ def train_tabnet_triage_model(
         print("\n[STEP 2] Feature Scaling (QuantileTransformer)")
     
     X_train_scaled, X_val_scaled, X_test_scaled, scaler = scale_tabnet_features(
-        X_train, X_val, X_test, verbose=False
+        X_train, X_val, X_test, verbose=True
     )
     
     if verbose:
@@ -162,11 +162,12 @@ def train_tabnet_triage_model(
         print("  Training on training set with validation monitoring...")
     
     # Train with early stopping on validation metric
+    print("  ⏳ Starting model training (this may take several minutes)...")
     model.fit(
         X_train=X_train_scaled,
         y_train=y_train,
         eval_set=[(X_val_scaled, y_val)],  # Validation for early stopping
-        eval_metric=['accuracy'],         # Multiclass-safe validation metric
+        eval_metric=['balanced_accuracy'],  # Better suited for imbalanced classes
         max_epochs=200,
         patience=20,                      # Stop if no improvement for 20 epochs
         batch_size=256,
@@ -176,7 +177,7 @@ def train_tabnet_triage_model(
     )
     
     if verbose:
-        print(f"  ✓ Training completed (stopped at epoch)")
+        print(f"  ✓ Training completed!")
     
     # ===== STEP 6: MAKE PREDICTIONS =====
     if verbose:

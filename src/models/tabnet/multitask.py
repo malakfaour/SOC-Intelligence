@@ -86,7 +86,7 @@ class SharedTabNetEncoder(nn.Module):
             momentum=0.02,
         )
     
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Forward pass through shared encoder.
         
@@ -97,11 +97,12 @@ class SharedTabNetEncoder(nn.Module):
         
         Returns
         -------
-        torch.Tensor
+        Tuple[torch.Tensor, torch.Tensor]
             Encoded features (batch_size, n_d)
+            TabNet sparsity regularization loss
         """
-        encoded, _ = self.tabnet(x)
-        return encoded
+        encoded, M_loss = self.tabnet(x)
+        return encoded, M_loss
 
 
 class TriageHead(nn.Module):
@@ -262,7 +263,7 @@ class MultiTaskTabNet(nn.Module):
     def forward(
         self,
         x: torch.Tensor,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Forward pass through multi-task model.
         
@@ -273,18 +274,19 @@ class MultiTaskTabNet(nn.Module):
         
         Returns
         -------
-        Tuple[torch.Tensor, torch.Tensor]
+        Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
             Triage logits (batch_size, n_classes)
             Remediation logits (batch_size, n_remediations)
+            TabNet sparsity regularization loss
         """
         # Shared encoding
-        encoded = self.encoder(x)
+        encoded, M_loss = self.encoder(x)
         
         # Task predictions
         triage_logits = self.triage_head(encoded)
         remediation_logits = self.remediation_head(encoded)
         
-        return triage_logits, remediation_logits
+        return triage_logits, remediation_logits, M_loss
     
     def predict_proba(
         self,
@@ -306,7 +308,7 @@ class MultiTaskTabNet(nn.Module):
         """
         self.eval()
         with torch.no_grad():
-            triage_logits, remediation_logits = self.forward(x)
+            triage_logits, remediation_logits, _ = self.forward(x)
             
             # Convert logits to probabilities
             triage_proba = torch.softmax(triage_logits, dim=1).cpu().numpy()
@@ -566,12 +568,13 @@ if __name__ == "__main__":
         x = torch.randn(batch_size, n_features)
         
         # Forward pass
-        triage_logits, remediation_logits = model(x)
+        triage_logits, remediation_logits, M_loss = model(x)
         
         print(f"  ✓ Input shape: {x.shape}")
         print(f"  ✓ Triage logits shape: {triage_logits.shape}")
         print(f"  ✓ Remediation logits shape: {remediation_logits.shape}")
-        
+        print(f"  Sparsity loss shape: {M_loss.shape}")
+
         # Test predictions
         print("\n[TEST] Prediction methods...")
         triage_proba, remediation_proba = model.predict_proba(x)
