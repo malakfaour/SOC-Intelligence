@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import csv
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, AsyncIterator, Dict, List, Literal, Optional, cast
@@ -28,6 +29,25 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 MODEL_ROOT = PROJECT_ROOT / "models"
 PROCESSED_DATA_ROOT = PROJECT_ROOT / "data" / "processed" / "v1"
 MODEL_NAMES = ("xgboost", "lightgbm", "tabnet")
+
+
+def get_allowed_origins() -> List[str]:
+    configured_origins = os.getenv("CORS_ALLOW_ORIGINS", "")
+    if configured_origins.strip():
+        return [origin.strip() for origin in configured_origins.split(",") if origin.strip()]
+
+    frontend_url = os.getenv("FRONTEND_URL", "").strip()
+    if frontend_url:
+        return [frontend_url]
+
+    return [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
+
+
+ALLOWED_ORIGINS = get_allowed_origins()
+ALLOWED_ORIGIN_REGEX = os.getenv("CORS_ALLOW_ORIGIN_REGEX")
 
 
 class PredictRequest(BaseModel):
@@ -512,7 +532,8 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=ALLOWED_ORIGIN_REGEX,
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -559,4 +580,4 @@ async def sample_features(
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=False)
+    uvicorn.run("app:app", host="0.0.0.0", port=int(os.getenv("PORT", "8000")), reload=False)

@@ -92,6 +92,42 @@ cd "C:\Users\malty\Projects\SOC Intelligence\soc-frontend"
 npm run dev -- --host 0.0.0.0
 ```
 
+## Deploying
+
+### Backend on Render
+
+This repo includes `render.yaml` so Render can detect the FastAPI service automatically.
+
+1. Push this repo to GitHub.
+2. In Render, create a new `Blueprint` or `Web Service` from the repo.
+3. Confirm these settings if you create the service manually:
+   - Root directory: repo root
+   - Build command: `pip install -r requirements.txt`
+   - Start command: `uvicorn app:app --host 0.0.0.0 --port $PORT`
+4. Add environment variables:
+   - `FRONTEND_URL=https://your-vercel-app.vercel.app`
+   - Optional for preview deployments: `CORS_ALLOW_ORIGIN_REGEX=https://.*\.vercel\.app`
+5. Deploy and verify `https://your-render-service.onrender.com/health`
+
+### Frontend on Vercel
+
+The frontend lives in `soc-frontend/` and includes `soc-frontend/vercel.json`.
+
+1. In Vercel, import the same repo.
+2. Set the project root directory to `soc-frontend`.
+3. Add this environment variable:
+   - `VITE_API_BASE_URL=https://your-render-service.onrender.com`
+4. Deploy the app.
+
+### Deployment Order
+
+1. Deploy Render first and copy the live backend URL.
+2. Add that URL to Vercel as `VITE_API_BASE_URL`.
+3. Add the Vercel production URL back into Render as `FRONTEND_URL`.
+4. Redeploy Render if you changed CORS variables.
+
+If you want Vercel preview deployments to work too, set `CORS_ALLOW_ORIGIN_REGEX=https://.*\.vercel\.app` on Render instead of locking CORS to a single production URL.
+
 ## Demo Flow
 
 1. Open the frontend and go to **Triage**.

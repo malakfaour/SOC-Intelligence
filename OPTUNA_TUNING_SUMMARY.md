@@ -215,7 +215,6 @@ Before running full tuning:
 
 The tuned parameters integrate with:
 - `src/models/tabnet/train.py` - Training pipeline (update model_params)
-- `src/models/tabnet/multitask.py` - Multi-task architecture  
 - `src/models/lightgbm/train.py` - Cross-model comparison
 - `src/models/xgboost/train.py` - Ensemble tuning
 

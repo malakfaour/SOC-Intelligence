@@ -155,6 +155,16 @@ def save_tabnet_model(
     model.save_model(model_base_path)
     joblib.dump(scaler.scaler, scaler_path)
 
+    # Strip non-JSON-safe values like optimizer_fn before persisting config.
+    serializable_hyperparams: Optional[Dict[str, Any]] = None
+    if hyperparams:
+        serializable_hyperparams = {}
+        for key, value in hyperparams.items():
+            if callable(value):
+                serializable_hyperparams[key] = getattr(value, "__name__", str(value))
+            else:
+                serializable_hyperparams[key] = value
+
     config: Dict[str, Any] = {
         "model_name": model_name,
         "model_type": "TabNetClassifier",
@@ -167,8 +177,8 @@ def save_tabnet_model(
             "output_distribution": scaler.scaler.output_distribution,
         },
     }
-    if hyperparams:
-        config["hyperparams"] = hyperparams
+    if serializable_hyperparams:
+        config["hyperparams"] = serializable_hyperparams
 
     with open(config_path, "w", encoding="utf-8") as handle:
         json.dump(config, handle, indent=2)

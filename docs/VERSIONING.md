@@ -74,26 +74,6 @@ y_rem_incident_family_val = pd.read_csv('data/processed/v1/y_rem_incident_family
 y_rem_incident_family_test = pd.read_csv('data/processed/v1/y_rem_incident_family_test.csv')
 ```
 
-### Recommended Multi-Task Validation
-
-Use the incident-level family target scheme with focal loss as the default validation path:
-
-```powershell
-python src\training\validate_tabnet_multitask.py --target-scheme incident_family --remediation-loss-type focal
-```
-
-Processed-data-only validation:
-
-```powershell
-python src\training\validate_tabnet_multitask.py --skip-train
-```
-
-Recommended training run:
-
-```powershell
-python src\training\train_tabnet_multitask.py --max-epochs 8 --patience 3 --batch-size 2048 --target-scheme incident_family --remediation-loss-type focal
-```
-
 ### Checking Available Versions
 
 ```python

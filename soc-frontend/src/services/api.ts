@@ -1,6 +1,7 @@
 import { PredictResponse, PredictionModel, RemediationResponse } from '../types/alert';
 
 export const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const backendLabel = BASE_URL.replace(/\/$/, '');
 
 export interface BackendHealthEntry {
   loaded: boolean;
@@ -64,7 +65,7 @@ export async function predict(features: number[], model: PredictionModel): Promi
       body: JSON.stringify({ features, model }),
     });
   } catch {
-    throw new Error('Unable to reach the FastAPI backend at http://localhost:8000.');
+    throw new Error(`Unable to reach the FastAPI backend at ${backendLabel}.`);
   }
 
   if (!res.ok) {
@@ -85,7 +86,7 @@ export async function healthStatus(): Promise<BackendHealthResponse> {
   try {
     res = await fetch(`${BASE_URL}/health`, { signal: AbortSignal.timeout(3000) });
   } catch {
-    throw new Error('Unable to reach the FastAPI backend at http://localhost:8000.');
+    throw new Error(`Unable to reach the FastAPI backend at ${backendLabel}.`);
   }
 
   if (!res.ok) {
@@ -117,7 +118,7 @@ export async function remediationPredict(incidentFeatures: number[]): Promise<Re
       body: JSON.stringify({ incident_features: incidentFeatures }),
     });
   } catch {
-    throw new Error('Unable to reach the FastAPI remediation endpoint at http://localhost:8000.');
+    throw new Error(`Unable to reach the FastAPI remediation endpoint at ${backendLabel}.`);
   }
 
   if (!res.ok) {

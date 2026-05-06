@@ -16,5 +16,28 @@
   "scaler_config": {
     "n_quantiles": 1000,
     "output_distribution": "normal"
+  },
+  "hyperparams": {
+    "n_d": 64,
+    "n_a": 64,
+    "n_steps": 5,
+    "gamma": 1.5,
+    "n_independent": 2,
+    "n_shared": 2,
+    "lambda_sparse": 0.001,
+    "momentum": 0.02,
+    "epsilon": 1e-15,
+    "seed": 42,
+    "optimizer_params": {
+      "lr": 0.02,
+      "weight_decay": 1e-05
+    },
+    "optimizer_fn": "Adam",
+    "verbose": 1,
+    "device_name": "cpu",
+    "max_epochs": 200,
+    "patience": 20,
+    "batch_size": 256,
+    "virtual_batch_size": 128
   }
 }
