@@ -193,6 +193,8 @@ node_modules/
 soc-frontend/node_modules/
 soc-frontend/dist/
 soc-frontend/.env
+!soc-frontend/src/lib/
+!soc-frontend/src/lib/**
 
 # Runtime outputs
 logs/
